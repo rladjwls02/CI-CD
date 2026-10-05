@@ -50,7 +50,7 @@ jobs:
             sudo docker stop github-actions-demo
             sudo docker rm github-actions-demo
             sudo docker run -d --name github-actions-demo --network demo-net -p 8080:8080 -e SPRING_PROFILES_ACTIVE=develop ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-demo:latest
-            curl --retry 40 --retry-delay 5 --retry-connrefused -fsS http://localhost:8080/api/users
+            curl --retry 40 --retry-delay 5 --retry-all-errors -fsS http://localhost:8080/api/users
       - name: Remove runner SSH access
         if: ${{ always() && steps.ingress.outcome == 'success' }}
         run: aws ec2 revoke-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
