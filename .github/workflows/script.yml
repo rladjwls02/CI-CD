@@ -23,3 +23,34 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PW }}
       - run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-demo:latest
+      - name: Get runner IP
+        id: ip
+        uses: haythem/public-ip@v1.3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+      - name: Allow runner SSH access
+        id: ingress
+        run: aws ec2 authorize-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: ${{ secrets.EC2_SSH_PORT }}
+          fingerprint: SHA256:nRkkWqy85FzHomjK7oS8OEe28kRQJvsZ93vVfUI49IE
+          timeout: 60s
+          script: |
+            set -e
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-demo:latest
+            sudo docker stop github-actions-demo
+            sudo docker rm github-actions-demo
+            sudo docker run -d --name github-actions-demo --network demo-net -p 8080:8080 -e SPRING_PROFILES_ACTIVE=develop ${{ secrets.DOCKERHUB_USERNAME }}/github-actions-demo:latest
+            curl --retry 40 --retry-delay 5 --retry-connrefused -fsS http://localhost:8080/api/users
+      - name: Remove runner SSH access
+        if: ${{ always() && steps.ingress.outcome == 'success' }}
+        run: aws ec2 revoke-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
