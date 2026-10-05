@@ -42,7 +42,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           password: ${{ secrets.EC2_PASSWORD }}
           port: ${{ secrets.EC2_SSH_PORT }}
-          fingerprint: SHA256:nRkkWqy85FzHomjK7oS8OEe28kRQJvsZ93vVfUI49IE
+          fingerprint: SHA256:6xV0V3ncX1h3FK5vADBX03BjaTZxv/JGYwfM1ex8KZU
           timeout: 60s
           script: |
             set -e
